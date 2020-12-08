@@ -1,0 +1,589 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Drawing;
+
+using SharpDX;
+using EnsoulSharp;
+using EnsoulSharp.SDK.MenuUI.Values;
+using EnsoulSharp.SDK;
+using EnsoulSharp.SDK.MenuUI;
+using EnsoulSharp.SDK.Utility;
+using EnsoulSharp.SDK.Prediction ;
+
+
+
+namespace Esharp.Champions
+{
+
+    internal class Ahri
+    {
+	
+        public static AIHeroClient Player = ObjectManager.Player;
+        public static Menu AhriMenu;
+        public static Menu Qmenu, Wmenu, Emenu, Rmenu, PredictionMenu;
+        public static Spell Q, W, E, R;
+      
+        public static void AhriLoad()
+        {
+            Game.Print("Ahri");
+
+            Qmenu = new Menu("Qmenu", "Q Settings");
+            Wmenu = new Menu("Wmenu", "W Settings");
+            Emenu = new Menu("Emenu", "E Settings");
+            Rmenu = new Menu("Rmenu", "R Settings");
+
+            PredictionMenu = new Menu("PredictionMenu", "(PredictionMenu)");
+            Prediction.Initialize(PredictionMenu);
+
+            var keys = new Menu("Keys", "Keys");
+			keys.Add(KeysSetting.ComboKey).Permashow();
+            keys.Add(KeysSetting.HarassKey).Permashow();
+            keys.Add(KeysSetting.FarmKey).Permashow();
+            keys.Add(KeysSetting.Flee).Permashow();
+
+            Qmenu.Add(QSettings.Qcombo);
+			Qmenu.Add(QSettings.QComboMana);
+            Qmenu.Add(QSettings.Qharass);
+            Qmenu.Add(QSettings.HarassMana);
+            Qmenu.Add(QSettings.QClear);
+            Qmenu.Add(QSettings.ClearMana);
+            Qmenu.Add(QSettings.QClearMin);
+
+
+            Wmenu.Add(WSettings.Wcombo);
+            Wmenu.Add(WSettings.WComboMana);
+            Wmenu.Add(WSettings.WHarass);
+            Wmenu.Add(WSettings.WHarassMana);
+            Wmenu.Add(WSettings.WClear);
+            Wmenu.Add(WSettings.WClearMana);
+
+
+            Emenu.Add(ESettings.Ecombo);
+            Emenu.Add(ESettings.EComboMana);
+            Emenu.Add(ESettings.EHarass);
+            Emenu.Add(ESettings.EHarassMana);
+            Emenu.Add(ESettings.EClear);
+            Emenu.Add(ESettings.EClearMana);
+            Emenu.Add(ESettings.ESituation);
+            Emenu.Add(ESettings.EFlee);
+            Emenu.Add(ESettings.EInterrupt);
+
+
+            Rmenu.Add(RSettings.Rcombo);
+            Rmenu.Add(RSettings.RComboMana);
+            Rmenu.Add(RSettings.RHarass);
+            Rmenu.Add(RSettings.RHarassMana);
+            Rmenu.Add(RSettings.RFlee);
+
+
+
+
+
+
+
+
+
+
+            AhriMenu = new Menu("AhriMenu", "Ahri Menu", true);
+            AhriMenu.Add(keys);
+            AhriMenu.Add(Qmenu);
+            AhriMenu.Add(Wmenu);
+            AhriMenu.Add(Emenu);
+            AhriMenu.Add(Rmenu);
+
+            AhriMenu.Add(PredictionMenu);
+            AhriMenu.Add(DrawSettings.DrawAA);
+            AhriMenu.Add(DrawSettings.DrawQ);
+            AhriMenu.Add(DrawSettings.DrawE);
+            AhriMenu.PermaShowText = "predicion";
+            AhriMenu.Attach();
+            
+
+            Drawing.OnDraw += Drawing_OnDraw;
+
+
+            Q = new Spell(SpellSlot.Q, 800f) { Delay = 0.25f };
+            Q.SetSkillshot(0.25f, 60f, 1550f, true, EnsoulSharp.SDK.Prediction.SkillshotType.Line);
+			
+            W = new Spell(SpellSlot.W, 700f);
+            E = new Spell(SpellSlot.E, 975f) { Delay = 0.25f };
+			E.SetSkillshot(0.25f, 70f, 1550f, true, EnsoulSharp.SDK.Prediction.SkillshotType.Line);
+            R = new Spell(SpellSlot.R, 450f);
+
+
+            Game.OnUpdate += Game_OnUpdate;
+             AIHeroClient.OnProcessSpellCast += AIHeroClient_OnProcessSpellCast;
+            Teleport.OnTeleport += Teleport_OnTeleport;
+        }
+
+
+        private static void AIHeroClient_OnProcessSpellCast(AIBaseClient sender, AIBaseClientProcessSpellCastEventArgs args)
+        {
+            if (AIBaseClientProcessSpellCastEventArgs.target == Player)
+            {
+			// try dodge
+            }
+        }
+
+		
+        private static void Game_OnUpdate(EventArgs args)
+        {
+            if (Player.IsDead) return;
+
+            if(Orbwalker.ActiveMode == OrbwalkerMode.Combo)
+            {
+                Combo();
+            }
+            if (Orbwalker.ActiveMode == OrbwalkerMode.Harass)
+            {
+                Harass();
+            }
+            if (Orbwalker.ActiveMode == OrbwalkerMode.LaneClear)
+            {
+                Clear();
+            }
+            if (Orbwalker.ActiveMode == OrbwalkerMode.Flee)
+            {
+                Flee();
+            }
+        }
+
+
+        private static void Combo()
+        {
+            if (Player.IsDashing())
+                return;
+
+            var targets = ObjectManager.Get<AIHeroClient>().Where(i => 
+            i != null
+            && !i.IsDead
+            && !i.IsAlly            
+            && E.GetPrediction().Hitchance >= 3;
+            if (W.IsReady() && targets != null && targets.Any())
+            {
+                foreach(var target in targets)
+                {
+                    if(target != null)
+                    {
+                        var Qpred = Q.GetPrediction.Hitchance;
+                        if(Q.IsReady() && Qpred.Hitchance >= 3)
+                        {
+                            QCombo();
+                        }
+                        else
+                        {
+                            WCombo();
+                        }
+                    }
+                }
+            }
+            else
+            {
+                QCombo();
+
+                if (ESettings.Ecombo.Enabled && E.IsReady())
+                    ECombo();
+            }                                 
+        }
+
+        private static void QCombo()
+        {
+            var target = ObjectManager.Get<AIHeroClient>().Where(i => i != null 
+			&& !i.IsAlly 
+			&& i.IsValidTarget(Q.Range) 
+			&& !i.IsDead 
+			&& Q.GetPrediction().Hitchance >= 3;
+            if (target == null)
+                return;
+           
+            if (QSettings.Qcombo.Enabled)
+            {
+                if (Q.IsReady() )
+                {
+                            var RandomTarget = TargetSelector.GetTargets(Q.Range).OrderBy(i => i.Health).FirstOrDefault(i =>
+                            Q.GetPrediction(RandomTarget, CollisionObjects.YasuoWall).Hitchance >= 3
+                            );
+
+
+                            if (RandomTarget != null)
+                            {
+
+                                    if (Q.GetPrediction(RandomTarget, CollisionObjects.YasuoWall).Hitchance >= 3 )
+                                    {
+
+                                            if (Q.SPredictionCast(target, EnsoulSharp.SDK.Prediction.HitChance.High))
+                                            {
+                                                return;
+                                            }
+                                        
+                                    }
+                                
+                            }
+                        
+                                       
+                }
+            }
+        }
+
+        private static void WCombo()
+        {
+            var target = FSTargetSelector.GetFSTarget(W.Range);
+
+            if (target == null) return;
+
+
+            if (!WSettings.Wcombo.Enabled || !W.IsReady()) return;
+
+            if (WSettings.Wonly.Enabled)
+            {
+                if(target.DistanceToPlayer() < Player.GetRealAutoAttackRange())
+                {
+                    if( Orbwalker.CanAttack())
+                    {
+                        if (W.SPredictionCast(target, EnsoulSharp.SDK.Prediction.HitChance.High, PacketCast))
+                        {
+                            if (Q.IsReady())
+                            {
+                                var Fspred = FSpred.Prediction.Prediction.GetPrediction(Q, target);
+
+                                if (Fspred.Hitchance >= FSpred.Prediction.HitChance.High)
+                                {
+                                    if (Q.SPredictionCast(target, EnsoulSharp.SDK.Prediction.HitChance.High, PacketCast))
+                                    {
+                                        return;
+                                    }
+                                }
+                            }
+                            return;
+                        }
+                    }
+                }
+
+                if (Q.IsReady())
+                {
+                    var Fspred = FSpred.Prediction.Prediction.GetPrediction(Q, target);
+
+                    if (Fspred.Hitchance >= FSpred.Prediction.HitChance.High)
+                    {
+                        if (W.SPredictionCast(target, EnsoulSharp.SDK.Prediction.HitChance.High, PacketCast))
+                        {
+                            if (Q.SPredictionCast(target, EnsoulSharp.SDK.Prediction.HitChance.High, PacketCast))
+                            {
+                                return;
+                            }
+                        }
+                    }
+                }               
+            }
+            else
+            {
+                if (W.SPredictionCast(target, EnsoulSharp.SDK.Prediction.HitChance.High, PacketCast))
+                {
+                    var Fspred = FSpred.Prediction.Prediction.GetPrediction(Q, target);
+
+                    if (Q.IsReady() && QSettings.Qcombo.Enabled)
+                        if (Fspred.Hitchance >= FSpred.Prediction.HitChance.High)
+                        {
+                            if (Q.SPredictionCast(target, EnsoulSharp.SDK.Prediction.HitChance.High, PacketCast))
+                            {
+                                return;
+                            }
+                        }
+                    return;
+                }
+            }
+        }
+
+        private static void ECombo()
+        {
+            var target = TargetSelector.GetTargets(Q.Range + E.Range).OrderBy(i => i.Health).FirstOrDefault();
+
+            if (target == null || !(target is AIHeroClient)) return;
+
+            if (target.HealthPercent > ESettings.TargetHeath.Value + 1) return;
+
+
+            EnsoulSharp.SDK.Geometry.Circle EPoints = new EnsoulSharp.SDK.Geometry.Circle(Player.Position, E.Range);
+            var Echeck = new Spell(SpellSlot.Unknown, 1000f);
+            Echeck.SetSkillshot(0.3f, 60f, 2000f, true, EnsoulSharp.SDK.Prediction.SkillshotType.Line);
+            foreach (var EPoint in EPoints.Points)
+            {
+                if (Yasuo_LogicHelper.Logichelper.UnderTower(EPoint.ToVector3()))
+                    return;
+
+                Echeck.UpdateSourcePosition(EPoint.ToVector3(), EPoint.ToVector3());
+
+                if (FSpred.Prediction.Prediction.GetPrediction(Echeck, target).Hitchance >= FSpred.Prediction.HitChance.High && target.Distance(EPoint) < Q.Range)
+                {
+                    if (EPoint.CountEnemyHeroesInRange(Player.GetRealAutoAttackRange() ) <= ESettings.TargetCount.Value)
+                    {
+                        if (E.Cast(EPoint, PacketCast))
+                            return;
+                    }
+                }
+            }
+        }
+
+        private static void Harass()
+        {
+            if (!KeysSetting.HarassKey.Active)
+                return;
+
+            var target = TargetSelector.SelectedTarget;
+
+            if (target == null || !target.IsValidTarget(Q.Range))
+            {
+                target = TargetSelector.GetTarget(Q.Range);
+            }
+
+            if (target == null || target.InAutoAttackRange())
+            {
+                target = Orbwalker.GetTarget() as AIHeroClient;
+            }
+
+            if (target == null || !(target is AIHeroClient)) return;
+
+            if (Player.ManaPercent >= QSettings.HarassMana.Value)
+                QCombo();
+        }
+
+        private static void Clear()
+        {
+            if ( !QSettings.QClear.Enabled) return;
+
+            if (!KeysSetting.FarmKey.Active)
+                return;
+
+            var Minions = GameObjects.Enemy.Where(i => i.IsValidTarget(Q.Range) 
+			&& !i.IsAlly 
+			&& !i.IsDead 
+			&& !i.Position.IsBuilding()).OrderByDescending(i => i.Health);
+            if (Minions == null)
+                return;
+
+            foreach(var min in Minions)
+            {
+                if (min.IsMinion)
+                {
+                    if (!KeysSetting.FarmKey.Active)
+                        return;
+
+                    if (QSettings.ClearMana.Value <= Player.ManaPercent)
+                    {
+                        if(min.Health >= Player.GetAutoAttackDamage(min)  + Damage.GetSpellDamage(Player, min, SpellSlot.Q) || min.Health < Damage.GetSpellDamage(Player, min, SpellSlot.Q))
+                        {
+
+                                if(min.Health < Damage.GetSpellDamage(Player, min, SpellSlot.Q))
+                                {
+                                    Q.Cast(min, PacketCast);
+                                }
+                                else
+                                {
+                                    var target = GameObjects.EnemyHeroes.Where(i => i.IsValidTarget(Q.Range) 
+									&& !i.IsDead 
+									&& target.Prediction.Prediction.GetPrediction(Q, i).Hitchance >= EnsoulSharp.Prediction.HitChance.High).OrderBy(i => i.Health).FirstOrDefault();
+                                    if (target != null)
+                                        
+
+                                    if (Q.SPredictionCast(target, EnsoulSharp.SDK.Prediction.HitChance.High, PacketCast))
+                                        return;
+                                }
+                            
+                            else
+                            {
+                                Q.Cast(min, PacketCast);
+                            }
+                        }
+                        else
+                        {
+                            var target = GameObjects.EnemyHeroes.Where(i => i.IsValidTarget(Q.Range) 
+							&& !i.IsDead 
+							&& Fspred.Prediction.Prediction.GetPrediction(Q, i).Hitchance >= EnsoulSharp.Prediction.HitChance.High).OrderBy(i => i.Health).FirstOrDefault();
+                            if (target != null)
+                                
+
+                            if (Q.SPredictionCast(target, EnsoulSharp.SDK.Prediction.HitChance.High, PacketCast))
+                                return;
+                        }
+                    }
+                }
+                else
+                {
+                    if (!KeysSetting.HarassKey.Active)
+                        return;
+
+                    if (QSettings.QHarass.Enabled)
+                    {
+                        if(QSettings.HarassMana.Value <= Player.ManaPercent)
+                        {
+                            var target = GameObjects.EnemyHeroes.Where(i => i.IsValidTarget(Q.Range) 
+							&& !i.IsDead 
+							&& FSpred.Prediction.Prediction.GetPrediction(Q, i).Hitchance >= EnsoulSharp.Prediction.HitChance.High).OrderBy(i => i.Health).FirstOrDefault();
+                            if (target != null)
+                                
+
+                            if (Q.SPredictionCast(target, EnsoulSharp.SDK.Prediction.HitChance.High, PacketCast))
+                                return;
+                        }
+                    }
+                }
+            }
+        }
+        private static void Drawing_OnDraw(EventArgs args)
+        {
+			
+			if (!Player.IsDead && DrawSettings.DrawAA.Enabled)
+            {
+                Drawing.DrawCircle(Player.Position, Q.Range, System.Drawing.Color.Blue);
+                Drawing.DrawCircle(Player.Position, Player.GetRealAutoAttackRange(), System.Drawing.Color.White);
+                if(FSTargetSelector.GetFSTarget(2000) != null)
+                {
+                    Drawing.DrawCircle(FSpred.Prediction.Prediction.GetPrediction(Q, FSTargetSelector.GetFSTarget(2000)).CastPosition, 20, System.Drawing.Color.White);
+                }
+            }
+            if (!Player.IsDead && DrawEzSettings.DrawQ.Enabled)
+            {
+                Drawing.DrawCircle(Player.Position, Q.Range, System.Drawing.Color.Blue);
+                Drawing.DrawCircle(Player.Position, Player.GetRealAutoAttackRange(), System.Drawing.Color.White);
+                if(FSTargetSelector.GetFSTarget(2000) != null)
+                {
+                    Drawing.DrawCircle(FSpred.Prediction.Prediction.GetPrediction(Q, FSTargetSelector.GetFSTarget(2000)).CastPosition, 20, System.Drawing.Color.White);
+                }
+            }
+        }
+
+
+
+        private static readonly float[] RBaseDamage = { 0f, 350f, 500f, 650f };
+
+        public static float RDamage(AIBaseClient target)
+        {
+            var rLevel = R.Level;
+
+            var rBaseDamage = RBaseDamage[rLevel]             +
+                              Player.TotalAttackDamage        +
+                              0.9f * Player.TotalMagicalDamage;
+
+            return (float)Player.CalculateDamage(target, DamageType.Magical, rBaseDamage);
+        }
+
+        public static float RHitTime;
+        public static float RecalStartTime;
+        public static float RecalEndTime;
+        public static AIBaseClient RecallTarget;
+        public static bool RecalFinished = true;
+
+        private static void Teleport_OnTeleport(AIBaseClient sender, Teleport.TeleportEventArgs args)
+        {
+            if (sender.IsValid && sender is AIHeroClient)
+            {
+
+                if (args.Type == Teleport.TeleportType.Recall)
+                {
+                    if(args.Status == Teleport.TeleportStatus.Start)
+                    {
+                        RecalFinished = false;
+                        RecalStartTime = Variables.TickCount;
+                        RecalEndTime = args.Duration;
+                        RecallTarget = args.Source;
+                    }
+
+                    if(args.Status == Teleport.TeleportStatus.Abort)
+                    {
+                        RecalFinished = true;
+                    }
+
+                    if (args.Status == Teleport.TeleportStatus.Finish)
+                    {
+                        RecalFinished = true;
+                    }
+                }
+            }
+        }
+    }
+
+
+
+
+
+
+
+
+
+
+    public class QSettings
+    {
+		public static readonly MenuBool QCombo = new MenuBool("QCombo", "Use Q in Combo?");
+        public static readonly MenuSlider QComboMana = new MenuSlider("QComboMana", "[QCombo] Min Mana : ", 50);
+
+		public static readonly MenuBool QHarass = new MenuBool("QHarass", "Use Q in harass?");
+        public static readonly MenuSlider QHarassMana = new MenuSlider("QHarassMana", "[QHarass] Min Mana : ", 50);
+
+		public static readonly MenuBool QClear = new MenuBool("QClear", "Use Q in Clear");
+        public static readonly MenuSlider QClearMana = new MenuSlider("QClearMana", "[QClearMana] Min Mana : ", 50);
+		public static readonly MenuSlider QClearMin = new MenuSlider("QClear", "[QClear] Min Hit", 2, 1, 5);
+
+    }
+
+    public class WSettings
+    {
+        public static readonly MenuBool WCombo = new MenuBool("WCombo", "Use W in Combo?");
+		public static readonly MenuSlider WComboMana = new MenuSlider("WComboMana", "[WCombo] Min Mana : ", 50);
+
+		public static readonly MenuBool WHarass = new MenuBool("WHarass", "Use W in harass?");
+        public static readonly MenuSlider WHarassMana = new MenuSlider("WHarassMana", "[WHarass] Min Mana : ", 50);
+
+         public static readonly MenuBool WClear = new MenuBool("WClear", "Use W in clear?");
+        public static readonly MenuSlider WClearMana = new MenuSlider("WClearMana", "[WClear] Min Mana : ", 50);
+
+    }
+
+    public class ESettings
+    {
+
+        public static readonly MenuBool ECombo = new MenuBool("ECombo", "Use E in Combo?");
+		public static readonly MenuSlider EComboMana = new MenuSlider("EComboMana", "[ECombo] Min Mana : ", 50);
+
+		public static readonly MenuBool EHarass = new MenuBool("EHarass", "Use E in harass?");
+        public static readonly MenuSlider EHarassMana = new MenuSlider("EHarassMana", "[EHarass] Min Mana : ", 50);
+
+        public static readonly MenuBool EClear = new MenuBool("EClear", "Use E in clear?");
+        public static readonly MenuSlider EClearMana = new MenuSlider("EClearMana", "[EClear] Min Mana : ", 50);
+		
+		public static readonly MenuBool ESituation = new MenuBool("ESituation", "save E for stunned, rooted ...?", false);
+		public static readonly MenuBool EFlee = new MenuBool("EFlee", "save E for flee only?", false);
+		public static readonly MenuBool EInterrupt = new MenuBool("EInterrupt", "save E to interrupt spells(kataR , karthusR...)?", false);
+
+		
+		
+    }
+
+    public class RSettings
+    {
+        public static readonly MenuBool RCombo = new MenuBool("RCombo", "Use R in Combo(gap closing)?");
+		public static readonly MenuSlider RComboMana = new MenuSlider("RComboMana", "[RCombo] Min Mana : ", 50);
+
+        public static readonly MenuBool RHarass = new MenuBool("RHarass", "Use R in Harass(gap closing)?");
+		public static readonly MenuSlider RHarassMana = new MenuSlider("RHarassMana", "[RHarass] Min Mana : ", 50);
+		
+		public static readonly MenuBool RFlee = new MenuBool("RFlee", "save R for flee only?", false);
+
+    }
+
+    public class DrawSettings
+    {
+        public static readonly MenuBool DrawAA = new MenuBool("DrawAA", "Draw AA Range", false);
+        public static readonly MenuBool DrawQ = new MenuBool("DrawQ", "Draw Q", false);
+        public static readonly MenuBool DrawE = new MenuBool("DrawE", "Draw E ", false);
+    }
+ 
+
+
+
+
+
+
+}
